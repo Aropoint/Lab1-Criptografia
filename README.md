@@ -1,1 +1,3 @@
-# Lab1-Criptograf-a
+# Lab1-Criptografía
+---
+Repositorio dedicado al Laboratorio 1 de Criptografía
